@@ -1,7 +1,7 @@
 package com.smallaswater.npc.form.inventory.responsible;
 
 import cn.nukkit.Player;
-import cn.nukkit.event.inventory.InventoryClickEvent;
+import cn.nukkit.event.player.PlayerTransferItemEvent;
 import cn.nukkit.item.Item;
 import lombok.Data;
 import org.jetbrains.annotations.NotNull;
@@ -18,18 +18,18 @@ public abstract class ResponseItem {
 
     private final Item item;
 
-    private BiConsumer<InventoryClickEvent, Player> clickItemListener;
+    private BiConsumer<PlayerTransferItemEvent, Player> clickItemListener;
 
     public ResponseItem(@NotNull Item item) {
         this.item = item;
     }
 
-    public ResponseItem onClick(@NotNull BiConsumer<InventoryClickEvent, Player> listener) {
+    public ResponseItem onClick(@NotNull BiConsumer<PlayerTransferItemEvent, Player> listener) {
         this.clickItemListener = listener;
         return this;
     }
 
-    public void callClick(@NotNull InventoryClickEvent event, @NotNull Player player) {
+    public void callClick(@NotNull PlayerTransferItemEvent event, @NotNull Player player) {
         this.clickItemListener.accept(event, player);
     }
 

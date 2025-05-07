@@ -33,7 +33,7 @@ import java.util.zip.GZIPOutputStream;
  */
 @SuppressWarnings({"WeakerAccess", "unused"})
 public class MetricsLite {
-    
+
     static {
         // You can use the property to disable the check in your test environment
         if (System.getProperty("bstats.relocatecheck") == null || !System.getProperty("bstats.relocatecheck").equals("false")) {
@@ -46,42 +46,42 @@ public class MetricsLite {
             }
         }
     }
-    
+
     // Executor service for requests
     // We use an executor service because the Nukkit scheduler is affected by server lags
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
-    
+
     // The version of this bStats class
     public static final int B_STATS_VERSION = 1;
-    
+
     // The url to which the data is sent
     private static final String URL = "https://bStats.org/submitData/bukkit";
-    
+
     // Is bStats enabled on this server?
     private boolean enabled;
-    
+
     // Should failed requests be logged?
     private static boolean logFailedRequests;
-    
+
     // Should the sent data be logged?
     private static boolean logSentData;
-    
+
     // Should the response text be logged?
     private static boolean logResponseStatusText;
-    
+
     // The uuid of the server
     private static String serverUUID;
-    
+
     // The plugin
     private final Plugin plugin;
-    
+
     // The plugin id
     private final int pluginId;
-    
+
     /**
      * Class constructor.
      *
-     * @param plugin The plugin which stats should be submitted.
+     * @param plugin   The plugin which stats should be submitted.
      * @param pluginId The id of the plugin.
      *                 It can be found at <a href="https://bstats.org/what-is-my-plugin-id">What is my plugin id?</a>
      */
@@ -91,7 +91,7 @@ public class MetricsLite {
         }
         this.plugin = plugin;
         this.pluginId = pluginId;
-        
+
         try {
             loadConfig();
         } catch (IOException e) {
@@ -99,7 +99,7 @@ public class MetricsLite {
             plugin.getLogger().warning("Failed to load bStats config!", e);
             return;
         }
-        
+
         if (enabled) {
             boolean found = false;
             // Search for all other bStats Metrics classes to see if we are the first one
@@ -108,7 +108,8 @@ public class MetricsLite {
                     service.getField("B_STATS_VERSION"); // Our identifier :)
                     found = true; // We aren't the first
                     break;
-                } catch (NoSuchFieldException ignored) { }
+                } catch (NoSuchFieldException ignored) {
+                }
             }
             // Register our service
             Server.getInstance().getServiceManager().register(MetricsLite.class, this, plugin, ServicePriority.NORMAL);
@@ -118,7 +119,7 @@ public class MetricsLite {
             }
         }
     }
-    
+
     /**
      * Checks if bStats is enabled.
      *
@@ -127,7 +128,7 @@ public class MetricsLite {
     public boolean isEnabled() {
         return enabled;
     }
-    
+
     /**
      * Starts the Scheduler which submits our data every 30 minutes.
      */
@@ -141,7 +142,7 @@ public class MetricsLite {
             // Don't be afraid! The connection to the bStats server is still async, only the stats collection is sync ;)
             Server.getInstance().getScheduler().scheduleTask(plugin, this::submitData);
         };
-        
+
         // Many servers tend to restart at a fixed time at xx:00 which causes an uneven distribution of requests on the
         // bStats backend. To circumvent this problem, we introduce some randomness into the initial and second delay.
         // WARNING: You must not modify and part of this Metrics class, including the submit delay or frequency!
@@ -151,7 +152,7 @@ public class MetricsLite {
         scheduler.schedule(submitTask, initialDelay, TimeUnit.MILLISECONDS);
         scheduler.scheduleAtFixedRate(submitTask, initialDelay + secondDelay, 1000 * 60 * 30, TimeUnit.MILLISECONDS);
     }
-    
+
     /**
      * Gets the plugin specific data.
      * This method is called using Reflection.
@@ -160,19 +161,19 @@ public class MetricsLite {
      */
     public JsonObject getPluginData() {
         JsonObject data = new JsonObject();
-        
+
         String pluginName = plugin.getDescription().getName();
         String pluginVersion = plugin.getDescription().getVersion();
-        
+
         data.addProperty("pluginName", pluginName); // Append the name of the plugin
         data.addProperty("id", pluginId); // Append the id of the plugin
         data.addProperty("pluginVersion", pluginVersion); // Append the version of the plugin
-        
+
         data.add("customCharts", new JsonArray());
-        
+
         return data;
     }
-    
+
     /**
      * Gets the server specific data.
      *
@@ -181,48 +182,49 @@ public class MetricsLite {
     private JsonObject getServerData() {
         // Minecraft specific data
         int playerAmount = Server.getInstance().getOnlinePlayers().size();
-        int onlineMode = Server.getInstance().getPropertyBoolean("xbox-auth", true) ? 1 : 0;
+//        int onlineMode = Server.getInstance().getSettings().baseSettings().xboxAuth() ? 1 : 0;
+        int onlineMode = 1;
         String softwareVersion = Server.getInstance().getApiVersion() + " (MC: " + Server.getInstance().getVersion().substring(1) + ")";
         String softwareName = Server.getInstance().getName();
-        
+
         // OS/Java specific data
         String javaVersion = System.getProperty("java.version");
         String osName = System.getProperty("os.name");
         String osArch = System.getProperty("os.arch");
         String osVersion = System.getProperty("os.version");
         int coreCount = Runtime.getRuntime().availableProcessors();
-        
+
         JsonObject data = new JsonObject();
-        
+
         data.addProperty("serverUUID", serverUUID);
-        
+
         data.addProperty("playerAmount", playerAmount);
         data.addProperty("onlineMode", onlineMode);
         data.addProperty("bukkitVersion", softwareVersion);
         data.addProperty("bukkitName", softwareName);
-        
+
         data.addProperty("javaVersion", javaVersion);
         data.addProperty("osName", osName);
         data.addProperty("osArch", osArch);
         data.addProperty("osVersion", osVersion);
         data.addProperty("coreCount", coreCount);
-        
+
         return data;
     }
-    
+
     /**
      * Collects the data and sends it afterwards.
      */
     @SuppressWarnings("unchecked")
     private void submitData() {
         final JsonObject data = getServerData();
-        
+
         JsonArray pluginData = new JsonArray();
         // Search for all other bStats Metrics classes to get their plugin data
         for (Class<?> service : Server.getInstance().getServiceManager().getKnownService()) {
             try {
                 service.getField("B_STATS_VERSION"); // Our identifier :)
-                
+
                 List<? extends RegisteredServiceProvider<?>> providers = null;
                 try {
                     providers = Server.getInstance().getServiceManager().getRegistrations(service);
@@ -231,13 +233,14 @@ public class MetricsLite {
                         Field handle = NKServiceManager.class.getDeclaredField("handle");
                         handle.setAccessible(true);
                         providers = ((Map<Class<?>, List<RegisteredServiceProvider<?>>>) handle.get(Server.getInstance().getServiceManager())).get(service);
-                    } catch (NullPointerException | NoSuchFieldException | IllegalAccessException | IllegalArgumentException e) {
+                    } catch (NullPointerException | NoSuchFieldException | IllegalAccessException |
+                             IllegalArgumentException e) {
                         if (logFailedRequests) {
                             plugin.getLogger().error("Encountered unexpected exception ", e);
                         }
                     }
                 }
-                
+
                 if (providers != null) {
                     for (RegisteredServiceProvider<?> provider : providers) {
                         try {
@@ -245,14 +248,17 @@ public class MetricsLite {
                             if (plugin instanceof JsonObject) {
                                 pluginData.add((JsonElement) plugin);
                             }
-                        } catch (NullPointerException | NoSuchMethodException | IllegalAccessException | InvocationTargetException ignored) { }
+                        } catch (NullPointerException | NoSuchMethodException | IllegalAccessException |
+                                 InvocationTargetException ignored) {
+                        }
                     }
                 }
-            } catch (NoSuchFieldException ignored) { }
+            } catch (NoSuchFieldException ignored) {
+            }
         }
-        
+
         data.add("plugins", pluginData);
-        
+
         // Create a new thread for the connection to the bStats server
         new Thread(() -> {
             try {
@@ -266,7 +272,7 @@ public class MetricsLite {
             }
         }).start();
     }
-    
+
     /**
      * Loads the bStats configuration.
      *
@@ -276,7 +282,7 @@ public class MetricsLite {
         File bStatsFolder = new File(plugin.getDataFolder().getParentFile(), "bStats");
         File configFile = new File(bStatsFolder, "config.yml");
         Config config = new Config(configFile);
-        
+
         // Check if the config file exists
         if (!config.exists("serverUuid")) {
             // Add default values
@@ -289,7 +295,7 @@ public class MetricsLite {
             config.set("logSentData", false);
             // Should the response text be logged?
             config.set("logResponseStatusText", false);
-            
+
             DumperOptions dumperOptions = new DumperOptions();
             dumperOptions.setDefaultFlowStyle(DumperOptions.FlowStyle.BLOCK);
             writeFile(configFile,
@@ -299,7 +305,7 @@ public class MetricsLite {
                     "# Check out https://bStats.org/ to learn more :)",
                     new Yaml(dumperOptions).dump(config.getRootSection()));
         }
-        
+
         // Load the data
         enabled = config.getBoolean("enabled", true);
         serverUUID = config.getString("serverUuid");
@@ -307,11 +313,11 @@ public class MetricsLite {
         logSentData = config.getBoolean("logSentData", false);
         logResponseStatusText = config.getBoolean("logResponseStatusText", false);
     }
-    
+
     /**
      * Writes a String to a file. It also adds a note for the user.
      *
-     * @param file The file to write to. Cannot be null.
+     * @param file  The file to write to. Cannot be null.
      * @param lines The lines to write.
      * @throws IOException If something did not work :(
      */
@@ -323,12 +329,12 @@ public class MetricsLite {
             }
         }
     }
-    
+
     /**
      * Sends the data to the bStats server.
      *
      * @param plugin Any plugin. It's just used to get a logger instance.
-     * @param data The data to send.
+     * @param data   The data to send.
      * @throws Exception If the request failed.
      */
     private static void sendData(Plugin plugin, JsonObject data) throws Exception {
@@ -342,10 +348,10 @@ public class MetricsLite {
             plugin.getLogger().info("Sending data to bStats: " + data);
         }
         HttpsURLConnection connection = (HttpsURLConnection) new URL(URL).openConnection();
-        
+
         // Compress the data to save bandwidth
         byte[] compressedData = compress(data.toString());
-        
+
         // Add headers
         connection.setRequestMethod("POST");
         connection.addRequestProperty("Accept", "application/json");
@@ -354,13 +360,13 @@ public class MetricsLite {
         connection.addRequestProperty("Content-Length", String.valueOf(compressedData.length));
         connection.setRequestProperty("Content-Type", "application/json"); // We send our data in JSON format
         connection.setRequestProperty("User-Agent", "MC-Server/" + B_STATS_VERSION);
-        
+
         // Send data
         connection.setDoOutput(true);
         try (DataOutputStream outputStream = new DataOutputStream(connection.getOutputStream())) {
             outputStream.write(compressedData);
         }
-        
+
         StringBuilder builder = new StringBuilder();
         try (BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(connection.getInputStream()))) {
             String line;
@@ -368,12 +374,12 @@ public class MetricsLite {
                 builder.append(line);
             }
         }
-        
+
         if (logResponseStatusText) {
             plugin.getLogger().info("Sent data to bStats and received response: " + builder);
         }
     }
-    
+
     /**
      * Gzips the given String.
      *
@@ -391,5 +397,5 @@ public class MetricsLite {
         }
         return outputStream.toByteArray();
     }
-    
+
 }

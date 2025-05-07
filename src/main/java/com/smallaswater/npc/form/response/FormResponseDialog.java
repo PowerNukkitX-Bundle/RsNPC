@@ -16,15 +16,15 @@ public class FormResponseDialog {
     private final int actionType;
 
     public FormResponseDialog(NPCRequestPacket packet, AdvancedFormWindowDialog dialog) {
-        this.entityRuntimeId = packet.getRequestedEntityRuntimeId();
-        this.data = packet.getData();
+        this.entityRuntimeId = packet.entityRuntimeId;
+        this.data = packet.data;
         try {
-            this.clickedButton = dialog.getButtons().get(packet.getSkinType());
+            this.clickedButton = dialog.getButtons().get(packet.skinType);
         } catch (IndexOutOfBoundsException e) {
             this.clickedButton = null;
         }
-        this.sceneName = packet.getSceneName();
-        this.requestType = packet.getRequestType();
-        this.actionType = packet.getSkinType();
+        this.sceneName = packet.sceneName;
+        this.requestType = packet.requestType;
+        this.actionType = packet.skinType;
     }
 }

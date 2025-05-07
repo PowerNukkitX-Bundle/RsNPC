@@ -11,6 +11,8 @@ import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.smallaswater.npc.form.element.ResponseElementDialogButton;
 import com.smallaswater.npc.form.response.FormResponseDialog;
+import lombok.Getter;
+import lombok.Setter;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
@@ -25,16 +27,25 @@ public class AdvancedFormWindowDialog {
 
     private static long dialogId = 0;
 
+    @Getter
+    @Setter
     private String title;
 
+    @Getter
+    @Setter
     private String content;
 
+    @Getter
     private String skinData = "{\"picker_offsets\":{\"scale\":[1.70,1.70,1.70],\"translate\":[0,20,0]},\"portrait_offsets\":{\"scale\":[1.750,1.750,1.750],\"translate\":[-7,50,0]},\"skin_list\":[{\"variant\":0},{\"variant\":1},{\"variant\":2},{\"variant\":3},{\"variant\":4},{\"variant\":5},{\"variant\":6},{\"variant\":7},{\"variant\":8},{\"variant\":9},{\"variant\":10},{\"variant\":11},{\"variant\":12},{\"variant\":13},{\"variant\":14},{\"variant\":15},{\"variant\":16},{\"variant\":17},{\"variant\":18},{\"variant\":19},{\"variant\":20},{\"variant\":21},{\"variant\":22},{\"variant\":23},{\"variant\":24},{\"variant\":25},{\"variant\":26},{\"variant\":27},{\"variant\":28},{\"variant\":29},{\"variant\":30},{\"variant\":31},{\"variant\":32},{\"variant\":33},{\"variant\":34}]}";
 
+    @Getter
     private String sceneName = String.valueOf(dialogId++);
 
+    @Setter
+    @Getter
     private List<ResponseElementDialogButton> buttons;
 
+    @Getter
     private final Entity bindEntity;
 
     protected BiConsumer<Player, FormResponseDialog> formClosedListener;
@@ -55,30 +66,6 @@ public class AdvancedFormWindowDialog {
         }
     }
 
-    public String getTitle() {
-        return title;
-    }
-
-    public void setTitle(String title) {
-        this.title = title;
-    }
-
-    public String getContent() {
-        return content;
-    }
-
-    public void setContent(String content) {
-        this.content = content;
-    }
-
-    public List<ResponseElementDialogButton> getButtons() {
-        return buttons;
-    }
-
-    public void setButtons(List<ResponseElementDialogButton> buttons) {
-        this.buttons = buttons;
-    }
-
     public ResponseElementDialogButton addAdvancedButton(String text) {
         return this.addButton(new ResponseElementDialogButton(text, text));
     }
@@ -97,14 +84,6 @@ public class AdvancedFormWindowDialog {
         return this.getBindEntity().getId();
     }
 
-    public Entity getBindEntity() {
-        return bindEntity;
-    }
-
-    public String getSkinData() {
-        return this.skinData;
-    }
-
     public void setSkinData(String data) {
         this.skinData = data;
     }
@@ -116,10 +95,6 @@ public class AdvancedFormWindowDialog {
     public void setButtonJSONData(String json) {
         this.setButtons(GSON.fromJson(json, new TypeToken<List<ResponseElementDialogButton>>() {
         }.getType()));
-    }
-
-    public String getSceneName() {
-        return sceneName;
     }
 
     public void updateSceneName() {
@@ -151,43 +126,43 @@ public class AdvancedFormWindowDialog {
         this.getBindEntity().setDataProperty(EntityDataTypes.INTERACT_TEXT, this.getContent());
 
         NPCDialoguePacket packet = new NPCDialoguePacket();
-        packet.setRuntimeEntityId(this.getEntityId());
-        packet.setAction(NPCDialoguePacket.NPCDialogAction.OPEN);
-        packet.setDialogue(this.getContent());
-        packet.setNpcName(this.getTitle());
-        packet.setSceneName(this.getSceneName());
-        packet.setActionJson(actionJson);
+        packet.runtimeEntityId = this.getEntityId();
+        packet.action = NPCDialoguePacket.NPCDialogAction.OPEN;
+        packet.dialogue = this.getContent();
+        packet.npcName = this.getTitle();
+        packet.sceneName = this.getSceneName();
+        packet.actionJson = actionJson;
         WINDOW_DIALOG_CACHE.put(this.getSceneName(), this);
         player.dataPacket(packet);
     }
 
     public void close(Player player, FormResponseDialog response) {
         NPCDialoguePacket closeWindowPacket = new NPCDialoguePacket();
-        closeWindowPacket.setRuntimeEntityId(response.getEntityRuntimeId());
-        closeWindowPacket.setAction(NPCDialoguePacket.NPCDialogAction.CLOSE);
-        closeWindowPacket.setSceneName(response.getSceneName());
+        closeWindowPacket.runtimeEntityId=response.getEntityRuntimeId();
+        closeWindowPacket.action = NPCDialoguePacket.NPCDialogAction.CLOSE;
+        closeWindowPacket.sceneName=response.getSceneName();
         player.dataPacket(closeWindowPacket);
     }
 
     public static boolean onEvent(@NotNull NPCRequestPacket packet, @NotNull Player player) {
-        AdvancedFormWindowDialog dialog = WINDOW_DIALOG_CACHE.getIfPresent(packet.getSceneName());
+        AdvancedFormWindowDialog dialog = WINDOW_DIALOG_CACHE.getIfPresent(packet.sceneName);
         if (dialog == null) {
             return false;
         }
 
-        if (packet.getRequestType() == NPCRequestPacket.RequestType.EXECUTE_CLOSING_COMMANDS) {
-            WINDOW_DIALOG_CACHE.invalidate(packet.getSceneName());
+        if (packet.requestType == NPCRequestPacket.RequestType.EXECUTE_CLOSING_COMMANDS) {
+            WINDOW_DIALOG_CACHE.invalidate(packet.sceneName);
         }
 
         FormResponseDialog response = new FormResponseDialog(packet, dialog);
 
         ResponseElementDialogButton clickedButton = response.getClickedButton();
-        if (packet.getRequestType() == NPCRequestPacket.RequestType.EXECUTE_ACTION && clickedButton != null) {
+        if (packet.requestType == NPCRequestPacket.RequestType.EXECUTE_ACTION && clickedButton != null) {
             clickedButton.callClicked(player, response);
             dialog.isClosed = true;
         }
 
-        if (packet.getRequestType() == NPCRequestPacket.RequestType.EXECUTE_CLOSING_COMMANDS) {
+        if (packet.requestType == NPCRequestPacket.RequestType.EXECUTE_CLOSING_COMMANDS) {
             dialog.callClosed(player, response);
         }
         return true;

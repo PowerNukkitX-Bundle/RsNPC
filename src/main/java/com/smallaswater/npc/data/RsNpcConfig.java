@@ -23,14 +23,17 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * @author lt_name
  */
+@Slf4j
 public class RsNpcConfig {
 
     public static final String NPC_CONFIG_VERSION_KEY = "ConfigVersion";
@@ -132,7 +135,14 @@ public class RsNpcConfig {
 
         try {
             HashMap<String, Object> map = config.get("spawn_point", new HashMap<>());
-            this.levelName = (String) map.get("level");
+            String oldLevelName = (String) map.get("level");
+            if (oldLevelName.endsWith("Dim0")) {
+                this.levelName = oldLevelName.split(" ")[0];
+            }
+            else {
+                this.levelName = oldLevelName;
+            }
+//            this.levelName = (String) map.get("level");
             Level level = Server.getInstance().getLevelByName(this.levelName);
             if (level == null) {
                 throw new RsNpcLoadException("world doesnt exist：" + this.levelName + "Unable to load NPCs for the world");
@@ -301,11 +311,7 @@ public class RsNpcConfig {
         map.put("yaw", this.location.getYaw());
         this.config.set("spawn_point", map);
 
-        if (this.itemData != null) {
-            this.itemData.save(this.config);
-        } else {
-            ItemData.empty().save(this.config);
-        }
+        Objects.requireNonNullElseGet(this.itemData, ItemData::empty).save(this.config);
 
         this.config.set("skin", this.skinName);
 
@@ -370,7 +376,8 @@ public class RsNpcConfig {
                     this.entityRsNpc = new EntityRsNPCCustomEntity(this.location.getChunk(), nbt, this);
                     EntityRsNPCCustomEntity entityRsNPC = (EntityRsNPCCustomEntity) this.entityRsNpc;
                     entityRsNPC.setIdentifier(this.customEntityIdentifier);
-                } else {
+                }
+                else {
                     this.entityRsNpc = new EntityRsNPC(this.location.getChunk(), nbt, this);
                     this.entityRsNpc.setSkin(this.getSkin());
                 }
@@ -504,7 +511,8 @@ public class RsNpcConfig {
                 try {
                     if (split.length == 3) {
                         this.hand = Item.get(split[0] + ":" + split[1], 0, Integer.parseInt(split[2]));
-                    } else {
+                    }
+                    else {
                         this.hand = Item.get(split[0] + ":" + split[1]);
                     }
                 } catch (Exception e) {
@@ -526,7 +534,8 @@ public class RsNpcConfig {
                     try {
                         if (split.length == 3) {
                             this.armor[i] = Item.get(split[0] + ":" + split[1], 0, Integer.parseInt(split[2]));
-                        } else {
+                        }
+                        else {
                             this.armor[i] = Item.get(split[0] + ":" + split[1]);
                         }
                     } catch (Exception e) {
